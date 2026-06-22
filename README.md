@@ -18,7 +18,6 @@ Repository ini berisi pipeline final untuk membuat dataset YOLO dan training YOL
 |   |-- prepare_data.py
 |   |-- validate_dataset.py
 |   |-- train_yolo.py
-|   |-- train_yolo_det.py
 |   |-- evaluate_test.py
 |   |-- evaluate_all_weights.py
 |   `-- dataset_yolo_det_192_3class_vv_vh_rgb_scene_80_10_10_seed7/
