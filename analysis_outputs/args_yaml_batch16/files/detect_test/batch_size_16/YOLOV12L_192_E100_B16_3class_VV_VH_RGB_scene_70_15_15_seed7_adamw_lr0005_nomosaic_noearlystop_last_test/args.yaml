@@ -1,0 +1,13 @@
+mode: 'test'
+model: 'E:\FILEALE\01YATUHANFIXBGTYOLOGFW\runs\detect\batch_size_16\YOLOV12L_192_E100_B16_3class_VV_VH_RGB_scene_70_15_15_seed7_adamw_lr0005_nomosaic_noearlystop\weights\last.pt'
+data: 'E:\FILEALE\01YATUHANFIXBGTYOLOGFW\yolo_new_gen\dataset_yolo_det_192_3class_vv_vh_rgb_scene_70_15_15_seed7\data.yaml'
+split: 'test'
+imgsz: 192
+batch: 16
+device: '0'
+augment: false
+iou: 0.7
+max_det: 300
+project: 'E:\FILEALE\01YATUHANFIXBGTYOLOGFW\runs\detect_test\batch_size_16'
+name: 'YOLOV12L_192_E100_B16_3class_VV_VH_RGB_scene_70_15_15_seed7_adamw_lr0005_nomosaic_noearlystop_last_test'
+save_dir: 'E:\FILEALE\01YATUHANFIXBGTYOLOGFW\runs\detect_test\batch_size_16\YOLOV12L_192_E100_B16_3class_VV_VH_RGB_scene_70_15_15_seed7_adamw_lr0005_nomosaic_noearlystop_last_test'
