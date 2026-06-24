@@ -1,0 +1,8 @@
+file,description,source_ranges
+01_prepare_dataset_filtering_split.png,"Prepare dataset: class filtering, VV/VH pairing, split group",yolo_new_gen/prepare_data.py:399-454
+02_coordinate_to_pixel_and_yolo_bbox.png,Coordinate transform to local pixels and YOLO bbox,yolo_exp/bbox_utils.py:30-54; yolo_exp/bbox_utils.py:121-164
+03_patch_rgb_and_yolo_label_write.png,Patch_RGB generation and YOLO label writing,yolo_new_gen/prepare_data.py:543-561
+04_training_yolov12.png,YOLOv12 training configuration,yolo_new_gen/train_yolo.py:95-150
+05_internal_test_evaluation.png,Internal test evaluation with best.pt,yolo_new_gen/evaluate_test.py:133-184
+06_external_opensarship_test_prepare.png,OpenSARShip external test preparation,yolo_new_gen/prepare_opensarship_patchcal_test.py:238-286
+07_prediction_characteristics_analysis.png,YOLO prediction ship-characteristic analysis,yolo_new_gen/analyze_yolo_prediction_characteristics.py:163-194; yolo_new_gen/analyze_yolo_prediction_characteristics.py:232-264

@@ -1,0 +1,9 @@
+path: "E:/FILEALE/01YATUHANFIXBGTYOLOGFW/external_tests/opensarship2_yolo_test"
+train: test/images
+val: test/images
+test: test/images
+nc: 3
+names:
+  0: Fishing
+  1: Cargo
+  2: Passenger

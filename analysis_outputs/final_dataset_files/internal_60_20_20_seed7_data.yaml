@@ -1,0 +1,9 @@
+path: "E:/FILEALE/01YATUHANFIXBGTYOLOGFW/yolo_new_gen/dataset_yolo_det_192_3class_vv_vh_rgb_scene_60_20_20_seed7"
+train: train/images
+val: val/images
+test: test/images
+nc: 3
+names:
+  0: Fishing
+  1: Cargo
+  2: Passenger
