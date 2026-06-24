@@ -27,14 +27,21 @@ from yolo_exp.bbox_utils import (
 
 YOLO_IMAGE_SIZE = 192
 DEFAULT_METADATA_PATH = PROJECT_ROOT / "gfw" / "metadata" / "metadata_with_vv_vh_gfw_ais_identity.csv"
-DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "dataset_yolo_det_192_3class_vv_vh_rgb_scene_80_10_10_seed7"
 DEFAULT_IMAGE_COLUMN = "patch"
 DEFAULT_VV_COLUMN = "patch_vv_actual_file"
 DEFAULT_VH_COLUMN = "patch_vh_actual_file"
 DEFAULT_SPLIT_GROUP = "scene"
-TRAIN_RATIO = 0.80
-VAL_RATIO = 0.10
-TEST_RATIO = 0.10
+SPLIT_PRESETS = {
+    "60_20_20": (0.60, 0.20, 0.20),
+    "70_15_15": (0.70, 0.15, 0.15),
+    "80_10_10": (0.80, 0.10, 0.10),
+}
+DEFAULT_SPLIT_PRESET = "80_10_10"
+TRAIN_RATIO, VAL_RATIO, TEST_RATIO = SPLIT_PRESETS[DEFAULT_SPLIT_PRESET]
+DEFAULT_OUTPUT_DIR = (
+    SCRIPT_DIR
+    / f"dataset_yolo_det_{YOLO_IMAGE_SIZE}_3class_vv_vh_rgb_scene_{DEFAULT_SPLIT_PRESET}_seed7"
+)
 REQUIRED_YOLO_COLUMNS = [
     "category",
     "Elaborated_type",
@@ -53,6 +60,71 @@ def parse_image_columns(image_columns):
     if not columns:
         raise ValueError("At least one image column must be provided.")
     return columns
+
+
+def normalize_split_preset(value):
+    normalized = str(value).strip().lower().replace("-", "_").replace("/", "_")
+    if normalized not in SPLIT_PRESETS:
+        supported = ", ".join(SPLIT_PRESETS)
+        raise argparse.ArgumentTypeError(
+            f"Unsupported split preset '{value}'. Choose one of: {supported}"
+        )
+    return normalized
+
+
+def split_name_from_ratios(train_ratio, val_ratio, test_ratio):
+    for split_name, preset_ratios in SPLIT_PRESETS.items():
+        if all(
+            abs(float(requested) - float(preset)) <= 1e-9
+            for requested, preset in zip(
+                (train_ratio, val_ratio, test_ratio),
+                preset_ratios,
+            )
+        ):
+            return split_name
+
+    return "_".join(
+        str(int(round(float(ratio) * 100)))
+        for ratio in (train_ratio, val_ratio, test_ratio)
+    )
+
+
+def resolve_split_config(split_preset, train_ratio, val_ratio, test_ratio):
+    manual_ratios = [train_ratio, val_ratio, test_ratio]
+    has_manual_ratio = any(value is not None for value in manual_ratios)
+
+    if split_preset and has_manual_ratio:
+        raise ValueError(
+            "Use either --split or --train-ratio/--val-ratio/--test-ratio, not both."
+        )
+
+    if has_manual_ratio:
+        if not all(value is not None for value in manual_ratios):
+            raise ValueError(
+                "Manual split ratios must include all three options: "
+                "--train-ratio, --val-ratio, and --test-ratio."
+            )
+        train_ratio, val_ratio, test_ratio = (float(value) for value in manual_ratios)
+        validate_split_ratios(train_ratio, val_ratio, test_ratio)
+        return (
+            split_name_from_ratios(train_ratio, val_ratio, test_ratio),
+            train_ratio,
+            val_ratio,
+            test_ratio,
+        )
+
+    split_name = split_preset or DEFAULT_SPLIT_PRESET
+    train_ratio, val_ratio, test_ratio = SPLIT_PRESETS[split_name]
+    return split_name, train_ratio, val_ratio, test_ratio
+
+
+def default_output_dir(imgsz, split_group, split_name, seed, combine_vv_vh):
+    image_mode = "vv_vh_rgb" if combine_vv_vh else "single"
+    split_group_tag = str(split_group).strip().lower().replace("-", "_")
+    return (
+        SCRIPT_DIR
+        / f"dataset_yolo_det_{imgsz}_3class_{image_mode}_{split_group_tag}_{split_name}_seed{seed}"
+    )
 
 
 def base_patch_id(patch_name):
@@ -270,6 +342,7 @@ def prepare_data_clean(
     train_ratio=TRAIN_RATIO,
     val_ratio=VAL_RATIO,
     test_ratio=TEST_RATIO,
+    split_name=None,
 ):
     metadata_path = Path(metadata_path).resolve()
     image_source_dir = Path(image_source_dir).resolve()
@@ -316,6 +389,8 @@ def prepare_data_clean(
         print(f"Image columns: {', '.join(image_columns)}")
     print(f"Split group: {split_group}")
     print(f"Split seed: {seed}")
+    if split_name:
+        print(f"Split preset: {split_name}")
     print(
         "Requested split ratio: "
         f"train={train_ratio:.0%}, val={val_ratio:.0%}, test={test_ratio:.0%}"
@@ -555,19 +630,45 @@ def main():
         default=DEFAULT_VH_COLUMN,
         help="Metadata column containing the VH TIFF file name for --combine-vv-vh.",
     )
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--split",
+        type=normalize_split_preset,
+        default=None,
+        metavar="{60_20_20,70_15_15,80_10_10}",
+        help="Preset train/val/test split ratio. Defaults to 80_10_10.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Output dataset folder. If omitted, a folder name is generated from imgsz/split/seed.",
+    )
     parser.add_argument("--imgsz", type=int, default=YOLO_IMAGE_SIZE, help="Output PNG size for YOLO training")
     parser.add_argument("--seed", type=int, default=7, help="Random seed for scene/group splitting")
-    parser.add_argument("--train-ratio", type=float, default=TRAIN_RATIO)
-    parser.add_argument("--val-ratio", type=float, default=VAL_RATIO)
-    parser.add_argument("--test-ratio", type=float, default=TEST_RATIO)
+    parser.add_argument("--train-ratio", type=float, default=None, help="Manual train ratio; use all manual ratios or use --split.")
+    parser.add_argument("--val-ratio", type=float, default=None, help="Manual validation ratio; use all manual ratios or use --split.")
+    parser.add_argument("--test-ratio", type=float, default=None, help="Manual test ratio; use all manual ratios or use --split.")
     args = parser.parse_args()
+
+    split_name, train_ratio, val_ratio, test_ratio = resolve_split_config(
+        args.split,
+        args.train_ratio,
+        args.val_ratio,
+        args.test_ratio,
+    )
+    output_dir = args.output_dir or default_output_dir(
+        args.imgsz,
+        args.split_group,
+        split_name,
+        args.seed,
+        args.combine_vv_vh,
+    )
 
     image_source_dir = find_image_source_dir(PROJECT_ROOT, args.image_dir)
     prepare_data_clean(
         args.metadata,
         image_source_dir,
-        args.output_dir,
+        output_dir,
         args.imgsz,
         args.image_columns or args.image_column,
         args.split_group,
@@ -575,9 +676,10 @@ def main():
         args.vv_column,
         args.vh_column,
         args.seed,
-        args.train_ratio,
-        args.val_ratio,
-        args.test_ratio,
+        train_ratio,
+        val_ratio,
+        test_ratio,
+        split_name,
     )
 
 
